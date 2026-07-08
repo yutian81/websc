@@ -5,7 +5,8 @@ export interface Env {
   BROWSER: BROWSER;
   R2: R2Bucket;
   KV: KVNamespace;
-  WEB_PATH?: string; // 落地页路径，默认 /websc
+  WEB_PATH?: string;   // 落地页路径，默认 /websc
+  WEBP_QUALITY?: string; // WebP 质量 1-100，默认 80
 }
 
 // ---------- 分辨率 16:9 ----------
@@ -37,9 +38,11 @@ async function toWebP(env: Env, buf: ArrayBuffer, self: URL, w: number, h: numbe
   await env.R2.put(tk, buf, { httpMetadata: { contentType: "image/png" } });
   const u = new URL(self);
   u.pathname = `/__raw/${encodeURIComponent(tk)}`;
+  const quality = parseInt(env.WEBP_QUALITY || "80", 10);
+  const q = isNaN(quality) ? 80 : Math.max(1, Math.min(100, quality));
   try {
     return await (await fetch(u.toString(), {
-      cf: { image: { format: "webp", width: w, height: h, fit: "contain" } }
+      cf: { image: { format: "webp", quality: q, width: w, height: h, fit: "contain" } }
     })).arrayBuffer();
   } finally {
     env.R2.delete(tk).catch(() => {});
@@ -136,7 +139,7 @@ function html(): string {
       transition: border-color .2s;
     }
     input:focus { border-color:#3b82f6; }
-    .f { margin-bottom: 24px; }
+    .f { margin-bottom: 14px; }
     button {
       width: 100%;
       padding: 11px;
