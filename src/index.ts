@@ -223,7 +223,7 @@ function html(): string {
         if(!x.ok){ e.textContent=d.error||'失败'; e.style.display='block'; return }
         r.innerHTML='<strong>直链：</strong><a href="'+d.url+'" target="_blank">'+d.url+'</a>';
         r.style.display='block';
-        v.innerHTML='<img src="'+d.url+'" alt="预览" onerror="this.style.display=\'none\'">';
+        v.innerHTML='<img src="'+d.url+'" alt="预览" onerror="this.style.display=\\'none\\'">';
         v.style.display='block'
       } catch(err) {
         e.textContent='网络错误: '+err.message;
@@ -268,8 +268,9 @@ export default {
         const { url: tu } = await request.json<any>();
         let fu = (tu || "").trim();
         if (!fu) return new Response(JSON.stringify({ error: "缺少url" }), { status: 400, headers: { "content-type": "application/json" } });
-        if (!/^https?:\/\//i.test(fu)) fu = "https://" + fu;
-        try { new URL(fu); } catch { return new Response(JSON.stringify({ error: "URL无效" }), { status: 400, headers: { "content-type": "application/json" } }); }
+if (!/^https?:\/\//i.test(fu)) fu = "https://" + fu;
+	        fu = fu.replace(/\/+$/, ""); // 去末尾斜杠
+	        try { new URL(fu); } catch { return new Response(JSON.stringify({ error: "URL无效" }), { status: 400, headers: { "content-type": "application/json" } }); }
 
         // POST — 强制重新截图，覆盖所有分辨率
         await cap(env, fu, DEF_RES, url);
@@ -291,6 +292,7 @@ export default {
       if (path !== "/" && path !== landingPath && path !== "/api/sc") {
         let tu = path.slice(1);
         if (!/^https?:\/\//i.test(tu)) tu = "https://" + tu;
+	        tu = tu.replace(/\/+$/, ""); // 去末尾斜杠
         const res = RES[url.searchParams.get("h") || ""] ? url.searchParams.get("h")! : DEF_RES;
         try { new URL(tu); } catch { return new Response("Invalid URL", { status: 400 }); }
         const h = await hashUrl(tu);
