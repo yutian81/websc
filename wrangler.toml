@@ -1,0 +1,14 @@
+name = "websc"
+main = "src/index.ts"
+compatibility_date = "2026-07-07"
+keep_vars = true
+
+[browser]
+binding = "BROWSER"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "websc"
+
+[[kv_namespaces]]
+binding = "KV"
