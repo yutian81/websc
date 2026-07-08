@@ -287,23 +287,25 @@ export default {
         });
       }
 
-  // 截图直链 — 同时支持以下写法：
-	//   /https://example.com  → 带协议   /example.com  → 自动补 https://
-	if (path !== "/" && path !== landingPath && path !== "/api/sc") {
-  let tu = path.slice(1);
-  // 无协议则补 https://
-  if (!/^https?:\/\//i.test(tu)) tu = "https://" + tu;
-    const res = RES[url.searchParams.get("h") || ""] ? url.searchParams.get("h")! : DEF_RES;
-    try { new URL(tu); } catch { return new Response("Invalid URL", { status: 400 }); }
-    const h = await hashUrl(tu);
-    const c = await getCached(env, h, res);
-    if (c) return c;
-    return await cap(env, tu, res, url);
-  }
+      // 截图直链 — 同时支持以下写法：
+      //   /https://example.com  → 带协议   /example.com  → 自动补 https://
+      if (path !== "/" && path !== landingPath && path !== "/api/sc") {
+      let tu = path.slice(1);
+      // 无协议则补 https://
+      if (!/^https?:\/\//i.test(tu)) tu = "https://" + tu;
+        const res = RES[url.searchParams.get("h") || ""] ? url.searchParams.get("h")! : DEF_RES;
+        try { new URL(tu); } catch { return new Response("Invalid URL", { status: 400 }); }
+        const h = await hashUrl(tu);
+        const c = await getCached(env, h, res);
+        if (c) return c;
+        return await cap(env, tu, res, url);
+      }
 
       return new Response("Not Found", { status: 404 });
     } catch (e: any) {
-      return new Response(JSON.stringify({ error: e.message || "Internal Error" }), { status: 500, headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify({ error: e.message || "Internal Error" }), {
+        status: 500, headers: { "content-type": "application/json" }
+      });
     }
   },
 };

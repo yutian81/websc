@@ -2,6 +2,8 @@
 	"name": "websc",
 	"version": "0.0.0",
 	"private": true,
+	"description": "网站截图直链服务 — Browser Rendering → WebP → R2",
+	"author": "yutian81",
 	"scripts": {
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
