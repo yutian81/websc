@@ -12,40 +12,29 @@
 - **缓存优先** — 已缓存截图直接返回，API 生成时后台预缓存全部分辨率
 - **路径可自定义** — 落地页路径通过环境变量 `WEB_PATH` 配置，默认 `/websc`
 
-## 目录结构
-
-```
-websc/
-├── src/
-│   └── index.ts                   # Worker 单文件，全部逻辑
-├── wrangler.toml                  # Cloudflare 配置
-├── worker-configuration.d.ts      # BROWSER / ScreenshotOptions 类型声明
-├── tsconfig.json                  # TypeScript 配置
-├── package.json
-├── .gitignore
-└── README.md
-```
-
 ## 路由
 
 | 路由 | 方法 | 说明 |
 |------|------|------|
 | `/websc` | GET | 落地页（路径可通过环境变量 `WEB_PATH` 自定义） |
 | `/api/sc` | POST | 生成截图 API，请求体 `{ "url": "https://..." }` |
-| `/<protocol>://<target>` | GET | 截图直链，例如 `/https://example.com?h=720` |
+| `/<domain>` | GET | 截图直链（简写），例如 `/github.com?h=720` |
+| `/<protocol>://<domain>` | GET | 截图直链（完整），例如 `/https://github.com?h=720` |
 | `/` | — | 返回 404 |
 
 ### 直链示例
 
+两种写法等价：
+
 ```
-# 默认 1080P
+# 简写（推荐）
+https://websc.your-name.workers.dev/github.com
+https://websc.your-name.workers.dev/github.com?h=720
+https://websc.your-name.workers.dev/github.com?h=360
+
+# 完整
 https://websc.your-name.workers.dev/https://github.com
-
-# 指定 720P
 https://websc.your-name.workers.dev/https://github.com?h=720
-
-# 指定 360P
-https://websc.your-name.workers.dev/https://github.com?h=360
 ```
 
 ## 环境变量
@@ -103,15 +92,15 @@ npm run deploy
 
 5. **添加环境变量**  
    在 WebSC Worker 页面 → **设置** → **环境变量** → 添加：
-   - 变量名：`WEB_PATH`，值：`/websc`（或自定义路径）
+   - 变量名：`WEB_PATH`，默认值：`/websc`（前面必须带 `/`）
 
 6. **触发部署**  
    - 推送代码到 GitHub 仓库即可自动触发部署
    - 也可在 Dashboard 手动点击 **保存并部署**
 
-#### Git 部署说明
 
-`wrangler.toml` 中声明的 `[[r2_buckets]]`、`[[kv_namespaces]]`、`[browser]` 绑定会在首次部署时自动创建并关联，无需在 Dashboard 手动配置。仅环境变量（`WEB_PATH`）需要在 Dashboard 手动添加。
+> [!Tip]
+> `wrangler.toml` 中声明的 `[[r2_buckets]]`、`[[kv_namespaces]]`、`[browser]` 绑定会在首次部署时自动创建并关联，无需在 Dashboard 手动配置。仅环境变量（`WEB_PATH`）需要在 Dashboard 手动添加，未设置则默认为 `websc`。
 
 ### 方法三：本地开发调试
 
@@ -130,7 +119,7 @@ npm run deploy
 ## 技术架构
 
 ```
-用户访问 /https://example.com
+用户访问 /github.com 或 /https://github.com
         │
         ▼
 Cloudflare Worker (fetch handler)

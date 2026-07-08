@@ -1,5 +1,5 @@
 // websc — Browser Rendering 截图 → WebP → R2 → KV 直链
-// 路由: /websc 落地页 | /api/sc 生成截图 | /https://target 直链
+// 路由: /websc 落地页 | /api/sc 生成截图 | /example.com 或 /https://example.com 直链
 
 export interface Env {
   BROWSER: BROWSER;
@@ -287,15 +287,19 @@ export default {
         });
       }
 
-      // 截图直链
-      if (path.startsWith("/https://") || path.startsWith("/http://")) {
-        const tu = path.slice(1), res = (RES[url.searchParams.get("h") || ""] ? url.searchParams.get("h")! : DEF_RES);
-        try { new URL(tu); } catch { return new Response("Invalid URL", { status: 400 }); }
-        const h = await hashUrl(tu);
-        const c = await getCached(env, h, res);
-        if (c) return c;
-        return await cap(env, tu, res, url);
-      }
+  // 截图直链 — 同时支持以下写法：
+	//   /https://example.com  → 带协议   /example.com  → 自动补 https://
+	if (path !== "/" && path !== landingPath && path !== "/api/sc") {
+  let tu = path.slice(1);
+  // 无协议则补 https://
+  if (!/^https?:\/\//i.test(tu)) tu = "https://" + tu;
+    const res = RES[url.searchParams.get("h") || ""] ? url.searchParams.get("h")! : DEF_RES;
+    try { new URL(tu); } catch { return new Response("Invalid URL", { status: 400 }); }
+    const h = await hashUrl(tu);
+    const c = await getCached(env, h, res);
+    if (c) return c;
+    return await cap(env, tu, res, url);
+  }
 
       return new Response("Not Found", { status: 404 });
     } catch (e: any) {
