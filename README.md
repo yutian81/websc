@@ -142,6 +142,7 @@ Cloudflare Worker (fetch handler)
               │  format=webp + width=输出分辨率 + height=输出分辨率
               ▼
         R2 永久存储（WebP）→ KV 写入元数据 → 返回
+```
 
 ## 依赖
 
