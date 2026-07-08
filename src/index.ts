@@ -271,14 +271,13 @@ export default {
         if (!/^https?:\/\//i.test(fu)) fu = "https://" + fu;
         try { new URL(fu); } catch { return new Response(JSON.stringify({ error: "URL无效" }), { status: 400, headers: { "content-type": "application/json" } }); }
 
+        // POST — 强制重新截图，覆盖所有分辨率
         await cap(env, fu, DEF_RES, url);
         ctx.waitUntil((async () => {
           for (const r of ["720", "360"]) {
-            const k = `ss/${await hashUrl(fu)}/${r}`;
-            if (!(await env.R2.get(k))) {
-              const rr = RES[r];
-              await store(env, fu, r, await toWebP(env, await shot(env, fu, rr.w, rr.h), url, rr.w, rr.h));
-            }
+            const rr = RES[r];
+            const png = await shot(env, fu, rr.w, rr.h);
+            await store(env, fu, r, await toWebP(env, png, url, rr.w, rr.h));
           }
         })());
 
@@ -290,12 +289,12 @@ export default {
       // 截图直链 — 同时支持以下写法：
       //   /https://example.com  → 带协议   /example.com  → 自动补 https://
       if (path !== "/" && path !== landingPath && path !== "/api/sc") {
-      let tu = path.slice(1);
-      // 无协议则补 https://
-      if (!/^https?:\/\//i.test(tu)) tu = "https://" + tu;
+        let tu = path.slice(1);
+        if (!/^https?:\/\//i.test(tu)) tu = "https://" + tu;
         const res = RES[url.searchParams.get("h") || ""] ? url.searchParams.get("h")! : DEF_RES;
         try { new URL(tu); } catch { return new Response("Invalid URL", { status: 400 }); }
         const h = await hashUrl(tu);
+        // GET — 缓存优先
         const c = await getCached(env, h, res);
         if (c) return c;
         return await cap(env, tu, res, url);
