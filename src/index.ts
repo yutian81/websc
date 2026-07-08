@@ -250,7 +250,7 @@ export default {
 
       // 内部：临时数据中转
       if (path.startsWith("/__raw/")) {
-        const o = await env.R2.get(decodeURIComponent(path.slice(6)));
+        const o = await env.R2.get(decodeURIComponent(path.slice(7)));
         if (!o) return new Response("NF", { status: 404 });
         const h = new Headers();
         h.set("content-type", "image/png");
