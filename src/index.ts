@@ -21,11 +21,11 @@ async function hashUrl(u: string): Promise<string> {
   return Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
 }
 
-// ---------- 截图 ----------
-async function shot(env: Env, url: string, w: number, h: number): Promise<ArrayBuffer> {
+// ---------- 截图（浏览器统一 1080P 视口） ----------
+async function shot(env: Env, url: string): Promise<ArrayBuffer> {
   return await (await env.BROWSER.quickAction("screenshot", {
     url,
-    viewport: { width: w, height: h },
+    viewport: { width: 1920, height: 1080 },
     screenshotOptions: { type: "png" },
     gotoOptions: { waitUntil: "networkidle2", timeout: 30000 },
   })).arrayBuffer();
@@ -38,7 +38,9 @@ async function toWebP(env: Env, buf: ArrayBuffer, self: URL, w: number, h: numbe
   const u = new URL(self);
   u.pathname = `/__raw/${encodeURIComponent(tk)}`;
   try {
-    return await (await fetch(u.toString(), { cf: { image: { format: "webp", width: w, height: h, fit: "contain" } } })).arrayBuffer();
+    return await (await fetch(u.toString(), {
+      cf: { image: { format: "webp", width: w, height: h, fit: "contain" } }
+    })).arrayBuffer();
   } finally {
     env.R2.delete(tk).catch(() => {});
   }
@@ -49,7 +51,9 @@ async function store(env: Env, url: string, res: string, data: ArrayBuffer): Pro
   const h = await hashUrl(url);
   await env.R2.put(`ss/${h}/${res}`, data, { httpMetadata: { contentType: "image/webp" } });
   const mk = `m:${h}`;
-  const m: any = (await env.KV.get(mk, "json")) || { url, createdAt: new Date().toISOString(), resolutions: [] };
+  const m: any = (await env.KV.get(mk, "json")) || {
+    url, createdAt: new Date().toISOString(), resolutions: []
+  };
   if (!m.resolutions.includes(res)) m.resolutions.push(res);
   m.updatedAt = new Date().toISOString();
   await env.KV.put(mk, JSON.stringify(m));
@@ -61,15 +65,15 @@ async function getCached(env: Env, h: string, res: string): Promise<Response | n
   if (!o) return null;
   const hs = new Headers();
   hs.set("content-type", "image/webp");
-  hs.set("cache-control", "public, max-age=86400, s-maxage=604800");
+  hs.set("cache-control", "public, max-age=86400, s-maxage=2592000");
   o.writeHttpMetadata(hs);
   return new Response(o.body, { headers: hs });
 }
 
-// 截图全流程
+// 截图全流程（浏览器 1080P → 输出目标分辨率 WebP）
 async function cap(env: Env, url: string, res: string, self: URL): Promise<Response> {
   const r = RES[res];
-  const wb = await toWebP(env, await shot(env, url, r.w, r.h), self, r.w, r.h);
+  const wb = await toWebP(env, await shot(env, url), self, r.w, r.h);
   await store(env, url, res, wb);
   return (await getCached(env, await hashUrl(url), res)) || new Response("ERR", { status: 500 });
 }
@@ -267,20 +271,25 @@ export default {
       if (path === "/api/sc" && request.method === "POST") {
         const { url: tu } = await request.json<any>();
         let fu = (tu || "").trim();
-        if (!fu) return new Response(JSON.stringify({ error: "缺少url" }), { status: 400, headers: { "content-type": "application/json" } });
-if (!/^https?:\/\//i.test(fu)) fu = "https://" + fu;
+        if (!fu) return new Response(JSON.stringify({ error: "缺少url" }), {
+          status: 400, headers: { "content-type": "application/json" }
+        });
+        if (!/^https?:\/\//i.test(fu)) fu = "https://" + fu;
 	        fu = fu.replace(/\/+$/, ""); // 去末尾斜杠
-	        try { new URL(fu); } catch { return new Response(JSON.stringify({ error: "URL无效" }), { status: 400, headers: { "content-type": "application/json" } }); }
+	        try { new URL(fu); } catch {
+            return new Response(JSON.stringify({ error: "URL无效" }), 
+            { status: 400, headers: { "content-type": "application/json" } });
+          }
 
         // POST — 强制重新截图，覆盖所有分辨率
         await cap(env, fu, DEF_RES, url);
-        ctx.waitUntil((async () => {
-          for (const r of ["720", "360"]) {
-            const rr = RES[r];
-            const png = await shot(env, fu, rr.w, rr.h);
-            await store(env, fu, r, await toWebP(env, png, url, rr.w, rr.h));
-          }
-        })());
+          ctx.waitUntil((async () => {
+	          for (const r of ["720", "360"]) {
+	            const rr = RES[r];
+	            const png = await shot(env, fu);
+	            await store(env, fu, r, await toWebP(env, png, url, rr.w, rr.h));
+	          }
+	        })());
 
         return new Response(JSON.stringify({ url: `${url.origin}/${fu}` }), {
           headers: { "content-type": "application/json" }
