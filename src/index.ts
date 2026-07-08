@@ -225,9 +225,11 @@ function html(): string {
         });
         const d=await x.json();
         if(!x.ok){ e.textContent=d.error||'失败'; e.style.display='block'; return }
-        r.innerHTML='<strong>直链：</strong><a href="'+d.url+'" target="_blank">'+d.url+'</a>';
-        r.style.display='block';
-        v.innerHTML='<img src="'+d.url+'" alt="预览" onerror="this.style.display=\\'none\\'">';
+	        r.innerHTML='<strong>1080P：</strong><a href="'+d["1080"]+'" target="_blank">'+d["1080"]+'</a><br>'+
+	          '<strong>720P：</strong><a href="'+d["720"]+'" target="_blank">'+d["720"]+'</a><br>'+
+	          '<strong>360P：</strong><a href="'+d["360"]+'" target="_blank">'+d["360"]+'</a>';
+	        r.style.display='block';
+	        v.innerHTML='<img src="'+d["1080"]+'" alt="预览" onerror="this.style.display=\\'none\\'">';
         v.style.display='block'
       } catch(err) {
         e.textContent='网络错误: '+err.message;
@@ -291,7 +293,11 @@ export default {
 	          }
 	        })());
 
-        return new Response(JSON.stringify({ url: `${url.origin}/${fu}` }), {
+        return new Response(JSON.stringify({
+          "1080": `${url.origin}/${fu}`,
+          "720": `${url.origin}/${fu}?h=720`,
+          "360": `${url.origin}/${fu}?h=360`,
+        }), {
           headers: { "content-type": "application/json" }
         });
       }
